@@ -109,6 +109,17 @@ class BotCore:
         data = file_dict.read()
         self.dictionary.extend(data.split('\n'))
         file_dict.close()
+        if '' in self.dictionary:
+            self.dictionary.remove('')
+        if '\n' in self.dictionary:
+            self.dictionary.remove('\n')
+        file_dict.close()
+
+    def __save_dictionary__(self):
+        file_dict = open("dictionary.dat", "w")
+        if len(self.dictionary) != 0:
+            file_dict.write('\n'.join(self.dictionary))
+        file_dict.close()
 
     def __load_settings__(self):
         file_settings = open('settings.dat', 'r')
@@ -121,3 +132,25 @@ class BotCore:
                 for pair in spl_data[1:]:
                     word, answer = pair.split(':')
                     self.answers.update({word: answer})
+        file_settings.close()
+
+    def __save_settings__(self):
+        file_settings = open('settings.dat', 'w')
+        file_settings.write('ignore ' + ' '.join(map(str, self.ignore)) + '\n')
+        ans_str = 'answers'
+        for item in list(self.answers.items()):
+            ans_str += ' '
+            ans_str += item[0]
+            ans_str += ':'
+            ans_str += item[1]
+        file_settings.write(ans_str)
+        file_settings.close()
+
+    def add_ignore(self, id):
+        self.ignore.append(id)
+        self.__save_settings__()
+
+    def add_phrase_in_dict(self, phrase):
+        self.dictionary.append(phrase)
+        self.__save_dictionary__()
+
