@@ -12,9 +12,8 @@ Created on 28.01.18
 
 class DialogInterpreter:
 
-    def __init__(self):
-        pass
+    def __init__(self, bot):
+        self.parent = bot
 
     def handle(self, message):
         print(message)
-        pass

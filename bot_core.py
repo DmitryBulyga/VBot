@@ -23,26 +23,29 @@ class BotCore:
         self.running = True
         self.admin = 0 # id пользователя, который управляет ботом
         self.dictionary = [] # словарный запас бота
+        self.ignore = [] # пользователи, забаненные ботом
+        self.answers = dict() # ответы бота на определенные сообщения
         self.api = None  # API для ВКонтакте
         self.timeout = 1  # время задержки отправки сообщений
         self.name = 'bot' # имя бота
         self.__load_dictionary__()
+        self.__load_settings__()
 
-    def auth(self, login, password, admin):
+    def auth(self, login, password, admin=0):
         """ Авторизация во ВКонтакте
 
         :param login: имя пользователя
         :param password: пароль
         :param admin: id пользователя, который управляет ботом
+        :param botname: имя бота
 
         """
+
         self.api = vk_api.VkApi(login=login, password=password)
         self.api.auth()
         self.admin = admin
-        lstthread = threading.Thread(target=self.__listen__, name='listen')
+        lstthread = threading.Thread(target=self.__listen__, name=self.name)
         lstthread.start() # запуск прослушивания сообщений
-
-
 
     def send(self, user, message):
         """ Отправка сообщения ВКонтакте
@@ -74,28 +77,47 @@ class BotCore:
                         self.parent.dialog_interpreter.handle(item['body'])
                         self.api.method('messages.markAsRead', {'peer_id': item['user_id']})
                     else:
-                        self.handle(item['user_id'])
+                        self.handle(item['user_id'], item['body'])
             time.sleep(self.timeout)
 
-    def handle(self, user):
+    def handle(self, user, message):
         """ Обработка сообщений от обычных пользователей
             По умолчанию бот отправляет произвольную фразу
             из своего словаря (BotCore.dictionary)
 
         :param user: id пользователя, от которого получено сообщение
-
+        :param message: текст полученного сообщения
         """
-        n_answer = int(random.uniform(0, len(self.dictionary)))
-        self.send(user, '[' + self.name + '] ' + self.dictionary[n_answer])
+
+        if user in self.ignore:
+            self.api.method('messages.markAsRead', {'peer_id': user})
+            return
+        answer = '[' + self.name + '] '
+        if self.answers.get(message) is not None:
+            answer += self.answers[message]
+        else:
+            n_answer = int(random.uniform(0, len(self.dictionary)))
+            answer += self.dictionary[n_answer]
+        self.send(user, answer)
 
 
     def __load_dictionary__(self):
         """ Загрузка словаря из файла dictionary.dat
 
-        :return: None
         """
-        file_dict = open("dictionary.dat", "r")
+        file_dict = open('dictionary.dat', 'r')
         data = file_dict.read()
         self.dictionary.extend(data.split('\n'))
         file_dict.close()
 
+    def __load_settings__(self):
+        file_settings = open('settings.dat', 'r')
+        data = file_settings.read().split('\n')
+        for _data in data:
+            spl_data = _data.split(' ')
+            if spl_data[0] == 'ignore':
+                self.ignore.extend(map(int, spl_data[1:]))
+            if spl_data[0] == 'answers':
+                for pair in spl_data[1:]:
+                    word, answer = pair.split(':')
+                    self.answers.update({word: answer})

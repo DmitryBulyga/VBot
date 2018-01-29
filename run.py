@@ -7,7 +7,7 @@ Created on 28.01.18
 
 Бот для ВКонтакте
 
-Управление ботом осуществдяется из командной строки
+Управление ботом осуществляется из терминала
 или из диалога ВКонтакте
 
 
@@ -15,6 +15,7 @@ Created on 28.01.18
 
 from bot_core import BotCore
 from dialog_interpreter import DialogInterpreter
+from interpreter import Interpreter
 
 class VBot:
     """ Основной класс, синхронизирует ядро бота и интерпретаторы
@@ -24,9 +25,12 @@ class VBot:
 
     def __init__(self):
         self.core = BotCore(self) # ядро бота
-        self.dialog_interpreter = DialogInterpreter() # интерпретатор команд из диалога ВКонтакте
+        self.dialog_interpreter = DialogInterpreter(self) # интерпретатор команд из диалога ВКонтакте
+        self.interpreter = Interpreter(self) # интерпретатор команд терминала
 
+    def start(self):
+        self.interpreter.main_loop()
 
 
 b = VBot()
-b.core.auth(' ', ' ', ' ')
+b.start()
