@@ -9,32 +9,80 @@ class Interpreter:
         self.parent = bot
 
     def main_loop(self):
-        while True:
+        working = True
+        while working:
             com_str = input()
-            command = com_str.split(' ')
-            if command[0] == 'auth':
-                self.__auth__()
-            elif command[0] == 'ignore':
-                self.__ignore__(command)
-            elif command[0] == 'dict':
-                self.__dict__(command)
-            elif command[0] == 'answers':
-                self.__answers__(command)
-            elif command[0] == 'admin':
-                self.__admin__(command)
-            elif command[0] == 'set':
-                pass
-            elif command[0] == 'exit':
+            working = self.interpret(com_str)
+
+    def interpret(self, com_str):
+        command = com_str.split(' ')
+        if command[0] == 'auth':
+            self.__auth__()
+        elif command[0] == 'ignore':
+            if len(command) == 3:
+                if command[1] == 'add':
+                    self.__ignore_add__(command[2])
+                elif command[1] == 'remove':
+                    self.__ignore_remove__(command[2])
+            elif len(command) == 2:
+                if command[1] == 'show':
+                    self.__ignore_show__()
+            else:
+                print('Incorrect command!')
+
+        elif command[0] == 'dict':
+            if command[1] == 'add' and len(command) >= 3:
+                self.__dict_add__(command[2:])
+            elif command[1] == 'remove' and len(command) == 3:
+                self.__dict_remove__(command[2])
+            elif command[1] == 'show' and len(command) == 2:
+                self.__dict_show__()
+            else:
+                print('Incorrect command!')
+
+        elif command[0] == 'answers':
+            if len(command) >= 3 and command[1] == 'add':
+                self.__answers_add__(command[2:])
+            elif len(command) >= 3 and command[1] == 'remove':
+                self.__answers_remove__(command[2:])
+            elif len(command) == 2 and command[1] == 'show':
+                self.__answers_show__()
+            else:
+                print('Incorrect command!')
+
+        elif command[0] == 'setadmin':
+            if len(command) == 2:
+                self.__setadmin__(command[1])
+            else:
+                print('Incorrect command!')
+
+        elif command[0] == 'setname':
+            if len(command) == 2:
+                self.__setname__(command[1])
+            else:
+                print('Incorrect command!')
+
+        elif command[0] == 'settimeout':
+            if len(command) == 2:
+                self.__settimeout__(command[1])
+            else:
+                print('Incorrect command!')
+
+        elif command[0] == 'exit':
+            self.parent.core.running = False
+            return False
+        elif command[0] == 'stop':
+            if self.parent.core.running:
                 self.parent.core.running = False
-                break
-            elif command[0] == 'stop':
-                if self.parent.core.running:
-                    self.parent.core.running = False
-                    print('Stopped!')
-                else:
-                    print("Bot is not running!")
+                print('Stopped!')
+            else:
+                print("Bot is not running!")
+        return True
 
     def __auth__(self):
+        if self.parent.core.running:
+            print('Bot is already running!')
+            return
         login = input("Login: ")
         password = getpass.getpass("Password: ")
         admin_id = input("AdminID (enter '0' if there's no admin): ")
@@ -44,69 +92,88 @@ class Interpreter:
         except Exception as e:
             print("Authorization failed!")
 
-    def __dict__(self, command):
-        if len(command) < 3:
-            print('Incorrect command!')
+    def __ignore_add__(self, user):
+        if not user.isnumeric():
+            print('Wrong user ID!')
             return
-        if command[1] == 'add':
-            phrase = ' '.join(command[2:])
-            self.parent.core.add_phrase_in_dict(phrase)
+        res = self.parent.core.add_ignore(user)
+        if res == 0:
+            print('Done!')
         else:
-            return
-        print('Done!')
+            print('Unknown error')
 
-    def __ignore__(self, command):
-        if command[1] == 'add':
-            if len(command) < 3:
-                print('Incorrect command!')
-                return
-            if not command[2].isnumeric():
-                print('Wrong user ID!')
-                return
-            self.parent.core.add_ignore(command[2])
-        elif command[1] == 'remove':
-            if len(command) < 3:
-                print('Incorrect command!')
-                return
-            if not command[2].isnumeric() or int(command[2]) >= len(self.parent.core.ignore):
-                print('Wrong index!')
-                return
-            index = int(command[2])
-            self.parent.core.ignore.pop(index)
-        elif command[1] == 'show':
-            if len(self.parent.core.ignore) == 0:
-                print('No ignored users')
-            for user in self.parent.core.ignore:
-                print('https://vk.com/id' + str(user) + '\n')
+    def __ignore_remove__(self, index):
+        if not index.isnumeric():
+            print('Wrong index!')
             return
+        res = self.parent.core.remove_ignore(int(index))
+        if res == 0:
+            print('Done!')
+        elif res == 2:
+            print('Wrong index!')
         else:
-            return
-        print('Done!')
+            print('Unknown error')
 
-    def __answers__(self, command):
-        if len(command) != 2:
-            print('Incorrect command!')
-            return
-        if command[1] == 'add':
-            message = input("Message: ")
-            answer = input("Bot's answer: ")
-            self.parent.core.add_answer(message, answer)
-        elif command[1] == 'show':
-            for item in list(self.parent.core.answers.items()):
-                print(item[0] + ':' + item[1] + '\n')
-                return
+    def __ignore_show__(self):
+        res = self.parent.core.get_ignore()
+        print(res)
+
+    def __dict_add__(self, phrase):
+        phrase = ' '.join(phrase)
+        res = self.parent.core.add_phrase_in_dict(phrase)
+        if res == 0:
+            print('Done!')
         else:
-            return
-        print('Done!')
+            print('Unknown error!')
 
-    def __admin__(self, command):
-        if len(command) < 2:
-            print('Incorrect command!')
+    def __dict_remove__(self, index):
+        if not index.isnumeric():
+            print('Wrong index!')
             return
-        elif command[1] == 'show':
-            if self.parent.core.admin == 0:
-                print('No admin!')
-                return
-            print(self.parent.core.admin)
+        res = self.parent.core.remove_phrase_from_dict(int(index))
+        if res == 0:
+            print('Done!')
+        elif res == 2:
+            print('Wrong index!')
+        else:
+            print('Unknown error!')
 
+    def __dict_show__(self):
+        res = self.parent.core.get_dict()
+        print(res)
+
+    def __answers_add__(self, string):
+        string = ' '.join(string)
+        if '|' in string:
+            message, answer = string.split('|')
+            res = self.parent.core.add_answer(message, answer)
+            if res == 0:
+                print('Done!')
+            else:
+                print('Unknown error!')
+        else:
+            print('Symbol "|" wasn\'t found')
+
+    def __answers_remove__(self, message):
+        message = ' '.join(message)
+        res = self.parent.core.remove_answer(message)
+        if res == 0:
+            print('Done!')
+        elif res == 2:
+            print('Answer was\'nt found')
+        else:
+            print('Unknown error!')
+
+    def __answers_show__(self):
+        res = self.parent.core.get_answers()
+        print(res)
+
+    def __setadmin__(self, id):
+        pass
+
+    def __setname__(self, name):
+        pass
+
+    def __settimeout__(self, timeout):
+        pass
 

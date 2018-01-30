@@ -147,13 +147,81 @@ class BotCore:
         file_settings.close()
 
     def add_ignore(self, id):
-        self.ignore.append(id)
-        self.__save_settings__()
+        try:
+            self.ignore.append(id)
+            self.__save_settings__()
+        except Exception as e:
+            return 1
+        return 0
+
+    def remove_ignore(self, index):
+        if index >= len(self.ignore):
+            return 2
+        try:
+            self.parent.core.ignore.pop(index)
+        except Exception as e:
+            return 1
+        return 0
+
+    def get_ignore(self):
+        if len(self.ignore) == 0:
+            return 'No ignored users'
+        counter = 0
+        answer = ''
+        for user in self.ignore:
+            answer += str(counter) + '. https://vk.com/id' + str(user) + '\n'
+            counter += 1
+        return answer
 
     def add_phrase_in_dict(self, phrase):
-        self.dictionary.append(phrase)
-        self.__save_dictionary__()
+        try:
+            self.dictionary.append(phrase)
+            self.__save_dictionary__()
+        except Exception as e:
+            return 1
+        return 0
+
+    def remove_phrase_from_dict(self, index):
+        if index >= len(self.dictionary):
+            return 2
+        try:
+            self.dictionary.pop(index)
+            self.__save_dictionary__()
+        except Exception as e:
+            return 1
+        return 0
+
+    def get_dict(self):
+        if len(self.dictionary) == 0:
+            return 'The dictionary is empty!'
+        counter = 0
+        answer = ''
+        for phrase in self.dictionary:
+            answer += str(counter) + '. ' + phrase + '\n'
+            counter += 1
+        return answer
 
     def add_answer(self, message, answer):
-        self.answers.update({message: answer})
-        self.__save_settings__()
+        try:
+            self.answers.update({message: answer})
+            self.__save_settings__()
+        except Exception as e:
+            return 1
+        return 0
+
+    def remove_answer(self, message):
+        if self.answers.get(message) is None:
+            return 2
+        try:
+            self.answers.pop(message)
+        except Exception as e:
+            return 1
+        return 0
+
+    def get_answers(self):
+        if len(self.parent.core.answers) == 0:
+            return 'No answers!'
+        answer = ''
+        for item in list(self.parent.core.answers.items()):
+            answer += item[0] + ':' + item[1] + '\n'
+        return answer
