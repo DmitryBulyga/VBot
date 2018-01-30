@@ -20,18 +20,18 @@ class BotCore:
 
     def __init__(self, bot):
         self.parent = bot # связь с другими модулями программы
-        self.running = True
+        self.running = False
         self.admin = 0 # id пользователя, который управляет ботом
         self.dictionary = [] # словарный запас бота
         self.ignore = [] # пользователи, забаненные ботом
         self.answers = dict() # ответы бота на определенные сообщения
         self.api = None  # API для ВКонтакте
-        self.timeout = 1  # время задержки отправки сообщений
+        self.timeout = 0.1  # время задержки отправки сообщений
         self.name = 'bot' # имя бота
         self.__load_dictionary__()
         self.__load_settings__()
 
-    def auth(self, login, password, admin=0):
+    def auth(self, login, password, admin):
         """ Авторизация во ВКонтакте
 
         :param login: имя пользователя
@@ -43,8 +43,12 @@ class BotCore:
 
         self.api = vk_api.VkApi(login=login, password=password)
         self.api.auth()
-        self.admin = admin
+        if admin.isnumeric():
+            self.admin = admin
+        else:
+            self.admin = 0
         lstthread = threading.Thread(target=self.__listen__, name=self.name)
+        self.running = True
         lstthread.start() # запуск прослушивания сообщений
 
     def send(self, user, message):
@@ -72,10 +76,9 @@ class BotCore:
                     """ Сообщения в групповых чатах
                             не обрабатываются ботом (пока что)
                     """
-
+                    self.api.method('messages.markAsRead', {'peer_id': item['user_id']})
                     if str(item['user_id']) == self.admin:
                         self.parent.dialog_interpreter.handle(item['body'])
-                        self.api.method('messages.markAsRead', {'peer_id': item['user_id']})
                     else:
                         self.handle(item['user_id'], item['body'])
             time.sleep(self.timeout)
@@ -88,9 +91,7 @@ class BotCore:
         :param user: id пользователя, от которого получено сообщение
         :param message: текст полученного сообщения
         """
-
         if user in self.ignore:
-            self.api.method('messages.markAsRead', {'peer_id': user})
             return
         answer = '[' + self.name + '] '
         if self.answers.get(message) is not None:
@@ -99,7 +100,6 @@ class BotCore:
             n_answer = int(random.uniform(0, len(self.dictionary)))
             answer += self.dictionary[n_answer]
         self.send(user, answer)
-
 
     def __load_dictionary__(self):
         """ Загрузка словаря из файла dictionary.dat
@@ -125,7 +125,7 @@ class BotCore:
         file_settings = open('settings.dat', 'r')
         data = file_settings.read().split('\n')
         for _data in data:
-            spl_data = _data.split(' ')
+            spl_data = _data.split('|')
             if spl_data[0] == 'ignore':
                 self.ignore.extend(map(int, spl_data[1:]))
             if spl_data[0] == 'answers':
@@ -136,10 +136,10 @@ class BotCore:
 
     def __save_settings__(self):
         file_settings = open('settings.dat', 'w')
-        file_settings.write('ignore ' + ' '.join(map(str, self.ignore)) + '\n')
+        file_settings.write('ignore|' + '|'.join(map(str, self.ignore)) + '\n')
         ans_str = 'answers'
         for item in list(self.answers.items()):
-            ans_str += ' '
+            ans_str += '|'
             ans_str += item[0]
             ans_str += ':'
             ans_str += item[1]
@@ -154,3 +154,6 @@ class BotCore:
         self.dictionary.append(phrase)
         self.__save_dictionary__()
 
+    def add_answer(self, message, answer):
+        self.answers.update({message: answer})
+        self.__save_settings__()

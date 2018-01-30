@@ -10,6 +10,7 @@ Created on 28.01.18
 
 """
 
+
 class DialogInterpreter:
 
     def __init__(self, bot):
