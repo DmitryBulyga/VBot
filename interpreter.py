@@ -77,6 +77,8 @@ class Interpreter:
                 print('Stopped!')
             else:
                 print("Bot is not running!")
+        else:
+            print('Wrong command!')
         return True
 
     def __auth__(self):
@@ -85,9 +87,8 @@ class Interpreter:
             return
         login = input("Login: ")
         password = getpass.getpass("Password: ")
-        admin_id = input("AdminID (enter '0' if there's no admin): ")
         try:
-            self.parent.core.auth(login, password, admin_id)
+            self.parent.core.auth(login, password)
             print("Running...")
         except Exception as e:
             print("Authorization failed!")
@@ -169,11 +170,25 @@ class Interpreter:
         print(res)
 
     def __setadmin__(self, id):
-        pass
+        res = self.parent.core.set_admin(id)
+        if res == 0:
+            print('Done!')
+        elif res == 2:
+            print('Incorrect admin ID!')
+        else:
+            print('Unknown error!')
 
     def __setname__(self, name):
-        pass
+        res = self.parent.core.set_name(name)
+        if res == 0:
+            print('Done!')
+        else:
+            print('Unknown error!')
 
     def __settimeout__(self, timeout):
-        pass
+        res = self.parent.core.set_timeout(timeout)
+        if res == 0:
+            print('Done!')
+        else:
+            print('Unknown error!')
 

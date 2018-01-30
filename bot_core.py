@@ -31,7 +31,7 @@ class BotCore:
         self.__load_dictionary__()
         self.__load_settings__()
 
-    def auth(self, login, password, admin):
+    def auth(self, login, password):
         """ Авторизация во ВКонтакте
 
         :param login: имя пользователя
@@ -43,10 +43,6 @@ class BotCore:
 
         self.api = vk_api.VkApi(login=login, password=password)
         self.api.auth()
-        if admin.isnumeric():
-            self.admin = admin
-        else:
-            self.admin = 0
         lstthread = threading.Thread(target=self.__listen__, name=self.name)
         self.running = True
         lstthread.start() # запуск прослушивания сообщений
@@ -105,46 +101,53 @@ class BotCore:
         """ Загрузка словаря из файла dictionary.dat
 
         """
-        file_dict = open('dictionary.dat', 'r')
-        data = file_dict.read()
-        self.dictionary.extend(data.split('\n'))
-        file_dict.close()
-        if '' in self.dictionary:
-            self.dictionary.remove('')
-        if '\n' in self.dictionary:
-            self.dictionary.remove('\n')
-        file_dict.close()
+        with open('dictionary.dat', 'r') as file_dict:
+            data = file_dict.read()
+            self.dictionary.extend(data.split('\n'))
+            file_dict.close()
+            if '' in self.dictionary:
+                self.dictionary.remove('')
+            if '\n' in self.dictionary:
+                self.dictionary.remove('\n')
+
 
     def __save_dictionary__(self):
-        file_dict = open("dictionary.dat", "w")
-        if len(self.dictionary) != 0:
-            file_dict.write('\n'.join(self.dictionary))
-        file_dict.close()
+        with open("dictionary.dat", "w") as file_dict:
+            if len(self.dictionary) != 0:
+                file_dict.write('\n'.join(self.dictionary))
 
     def __load_settings__(self):
-        file_settings = open('settings.dat', 'r')
-        data = file_settings.read().split('\n')
-        for _data in data:
-            spl_data = _data.split('|')
-            if spl_data[0] == 'ignore':
-                self.ignore.extend(map(int, spl_data[1:]))
-            if spl_data[0] == 'answers':
-                for pair in spl_data[1:]:
-                    word, answer = pair.split(':')
-                    self.answers.update({word: answer})
-        file_settings.close()
+        with open('settings.dat', 'r') as file_settings:
+            data = file_settings.read().splitlines()
+            for d in data:
+                spl_data = d.split('|')
+                if spl_data[0] == 'ignore':
+                    self.ignore.extend(map(int, spl_data[1:]))
+                elif spl_data[0] == 'answers':
+                    for pair in spl_data[1:]:
+                        word, answer = pair.split(':')
+                        self.answers.update({word: answer})
+                elif spl_data[0] == 'admin':
+                    if spl_data[1].isnumeric():
+                        self.admin = int(spl_data[1])
+                elif spl_data[0] == 'name':
+                    self.name = spl_data[1]
+                elif spl_data[0] == 'timeout':
+                    self.timeout = float(spl_data[1])
 
     def __save_settings__(self):
-        file_settings = open('settings.dat', 'w')
-        file_settings.write('ignore|' + '|'.join(map(str, self.ignore)) + '\n')
-        ans_str = 'answers'
-        for item in list(self.answers.items()):
-            ans_str += '|'
-            ans_str += item[0]
-            ans_str += ':'
-            ans_str += item[1]
-        file_settings.write(ans_str)
-        file_settings.close()
+        with open('settings.dat', 'w') as file_settings:
+            file_settings.write('ignore|' + '|'.join(map(str, self.ignore)) + '\n')
+            ans_str = 'answers'
+            for item in list(self.answers.items()):
+                ans_str += '|'
+                ans_str += item[0]
+                ans_str += ':'
+                ans_str += item[1]
+            file_settings.write(ans_str + '\n')
+            file_settings.write('admin|' + str(self.admin) + '\n')
+            file_settings.write('name|' + self.name + '\n')
+            file_settings.write('timeout|' + str(self.timeout) + '\n')
 
     def add_ignore(self, id):
         try:
@@ -225,3 +228,30 @@ class BotCore:
         for item in list(self.parent.core.answers.items()):
             answer += item[0] + ':' + item[1] + '\n'
         return answer
+
+    def set_admin(self, id):
+        try:
+            if id.isnumeric():
+                self.parent.core.admin = id
+                self.__save_settings__()
+                return 0
+            else:
+                return 2
+        except Exception as e:
+            return 1
+
+    def set_name(self, name):
+        try:
+            self.name = name
+            self.__save_settings__()
+            return 0
+        except Exception as e:
+            return 1
+
+    def set_timeout(self, timeout):
+        try:
+            self.parent.core.timeout = float(timeout)
+            self.__save_settings__()
+            return 0
+        except Exception as e:
+            return 1
