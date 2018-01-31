@@ -14,7 +14,6 @@ Created on 28.01.18
 """
 
 from bot_core import BotCore
-from dialog_interpreter import DialogInterpreter
 from interpreter import Interpreter
 
 class VBot:
@@ -25,7 +24,6 @@ class VBot:
 
     def __init__(self):
         self.core = BotCore(self) # ядро бота
-        self.dialog_interpreter = DialogInterpreter(self) # интерпретатор команд из диалога ВКонтакте
         self.interpreter = Interpreter(self) # интерпретатор команд терминала
 
     def start(self):

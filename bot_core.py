@@ -21,6 +21,7 @@ class BotCore:
     def __init__(self, bot):
         self.parent = bot # связь с другими модулями программы
         self.running = False
+        self.admin_mode = True
         self.admin = 0 # id пользователя, который управляет ботом
         self.dictionary = [] # словарный запас бота
         self.ignore = [] # пользователи, забаненные ботом
@@ -40,12 +41,24 @@ class BotCore:
         :param botname: имя бота
 
         """
+        try:
+            self.api = vk_api.VkApi(login=login, password=password)
+            self.api.auth()
+        except Exception as e:
+            return 1
+        return 0
 
-        self.api = vk_api.VkApi(login=login, password=password)
-        self.api.auth()
-        lstthread = threading.Thread(target=self.__listen__, name=self.name)
-        self.running = True
-        lstthread.start() # запуск прослушивания сообщений
+
+    def start(self):
+        if self.api is None:
+            return 2
+        try:
+            lstthread = threading.Thread(target=self.__listen__, name=self.name)
+            self.running = True
+            lstthread.start()  # запуск прослушивания сообщений
+        except Exception as e:
+            return 1
+        return 0
 
     def send(self, user, message):
         """ Отправка сообщения ВКонтакте
@@ -55,8 +68,6 @@ class BotCore:
 
         """
         self.api.method('messages.send', {'user_id': user, 'message': message})
-
-
 
     def __listen__(self):
         """ Получение сообщений ВКонтакте
@@ -73,8 +84,8 @@ class BotCore:
                             не обрабатываются ботом (пока что)
                     """
                     self.api.method('messages.markAsRead', {'peer_id': item['user_id']})
-                    if str(item['user_id']) == self.admin:
-                        self.parent.dialog_interpreter.handle(item['body'])
+                    if int(item['user_id']) == int(self.admin):
+                        self.handle_admin(item['body'])
                     else:
                         self.handle(item['user_id'], item['body'])
             time.sleep(self.timeout)
@@ -96,6 +107,16 @@ class BotCore:
             n_answer = int(random.uniform(0, len(self.dictionary)))
             answer += self.dictionary[n_answer]
         self.send(user, answer)
+
+    def handle_admin(self, message):
+        if 'auth' in message or 'exit' in message:
+            return
+        if not self.admin_mode and 'adminmode' not in message:
+            self.handle(self.admin, message)
+            return
+        answer = self.parent.interpreter.interpret(message)
+        if 'setadmin' not in message:
+            self.send(self.admin, answer)
 
     def __load_dictionary__(self):
         """ Загрузка словаря из файла dictionary.dat
@@ -162,6 +183,7 @@ class BotCore:
             return 2
         try:
             self.parent.core.ignore.pop(index)
+            self.__save_settings__()
         except Exception as e:
             return 1
         return 0
@@ -217,6 +239,7 @@ class BotCore:
             return 2
         try:
             self.answers.pop(message)
+            self.__save_settings__()
         except Exception as e:
             return 1
         return 0
